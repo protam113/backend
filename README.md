@@ -1,6 +1,3 @@
-
-
-````md
 # HYBRBASE Technical Challenge: Client–Freelancer Portal
 
 ---
