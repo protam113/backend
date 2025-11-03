@@ -12,7 +12,17 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from 'src/database/database.module';
 import { AppService } from './app.service';
 import { RedisCacheModule } from 'src/modules/cache/redis-cache.module';
-import { ApiKeyMiddleware } from 'src/middlewares/api-key.middleware';
+import { AuthModule } from 'src/modules/auth/auth.module';
+import { UserModule } from 'src/modules/user/user.module';
+import { CorsMiddleware } from 'src/middlewares/cors.middleware';
+import { RateLimitMiddleware } from 'src/middlewares/rate-limiter.middleware';
+import { JwtCookieMiddleware } from 'src/middlewares/jwt-cookie.middleware';
+import { RolesGuard } from 'src/modules/auth/guards/RolesGuard';
+import { ProjectModule } from 'src/modules/project/project.module';
+import { PaymentModule } from 'src/modules/payment/payment.module';
+import { FreelanceModule } from 'src/modules/freelance/freelance.module';
+import { ClientModule } from 'src/modules/client/client.module';
+
 
 @Module({
   imports: [
@@ -36,6 +46,13 @@ import { ApiKeyMiddleware } from 'src/middlewares/api-key.middleware';
     DatabaseModule,
     ScheduleModule.forRoot(),
     RedisCacheModule,
+
+    AuthModule,
+    UserModule,
+    ProjectModule,
+    PaymentModule,
+    FreelanceModule,
+    ClientModule
   ],
   controllers: [AppBaseController],
   providers: [
@@ -43,7 +60,26 @@ import { ApiKeyMiddleware } from 'src/middlewares/api-key.middleware';
       provide: 'app',
       useClass: AppService,
     },
-    ApiKeyMiddleware,
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
+    },
   ],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+
+    consumer.apply(CorsMiddleware).forRoutes('*');
+
+
+    consumer.apply(RateLimitMiddleware).forRoutes('*');
+
+    consumer
+      .apply(JwtCookieMiddleware)
+      .exclude(
+        '/v1/public/auth/login',
+        '/v1/public/auth/sign-up',
+      )
+      .forRoutes('*');
+  }
+}
